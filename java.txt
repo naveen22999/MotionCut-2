@@ -1,0 +1,188 @@
+
+import java.io.*;
+import java.util.*;
+
+class Expense {
+    private Date date;
+    private String category;
+    private double amount;
+
+    public Expense(Date date, String category, double amount) {
+        this.date = date;
+        this.category = category;
+        this.amount = amount;
+    }
+
+    public Date getDate() {
+        return date;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+
+    @Override
+    public String toString() {
+        return "Date: " + date + ", Category: " + category + ", Amount: $" + amount;
+    }
+}
+
+class User {
+    private String username;
+    private String password;
+
+    public User(String username, String password) {
+        this.username = username;
+        this.password = password;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+}
+
+public class ExpenseTracker {
+    private static final String DATA_FILE = "expenses.txt";
+    private static Map<String, List<Expense>> expenseMap;
+    private static List<User> users;
+
+    public ExpenseTracker() {
+        expenseMap = new HashMap<>();
+        users = new ArrayList<>();
+    }
+
+    public void registerUser(String username, String password) {
+        users.add(new User(username, password));
+    }
+
+    public boolean loginUser(String username, String password) {
+        for (User user : users) {
+            if (user.getUsername().equals(username) && user.getPassword().equals(password)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void addExpense(String username, Date date, String category, double amount) {
+        Expense expense = new Expense(date, category, amount);
+        if (!expenseMap.containsKey(username)) {
+            expenseMap.put(username, new ArrayList<>());
+        }
+        expenseMap.get(username).add(expense);
+    }
+
+    public List<Expense> getExpenses(String username) {
+        return expenseMap.getOrDefault(username, new ArrayList<>());
+    }
+
+    public double calculateTotalExpense(String username) {
+        List<Expense> expenses = expenseMap.getOrDefault(username, new ArrayList<>());
+        double total = 0;
+        for (Expense expense : expenses) {
+            total += expense.getAmount();
+        }
+        return total;
+    }
+
+    public Map<String, Double> calculateCategorySum(String username) {
+        List<Expense> expenses = expenseMap.getOrDefault(username, new ArrayList<>());
+        Map<String, Double> categorySum = new HashMap<>();
+        for (Expense expense : expenses) {
+            String category = expense.getCategory();
+            double amount = expense.getAmount();
+            categorySum.put(category, categorySum.getOrDefault(category, 0.0) + amount);
+        }
+        return categorySum;
+    }
+
+    public void saveToFile() {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(DATA_FILE))) {
+            for (String username : expenseMap.keySet()) {
+                for (Expense expense : expenseMap.get(username)) {
+                    writer.println(username + "," + expense.getDate().getTime() + "," + expense.getCategory() + "," + expense.getAmount());
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void loadFromFile() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(DATA_FILE))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                String username = parts[0];
+                Date date = new Date(Long.parseLong(parts[1]));
+                String category = parts[2];
+                double amount = Double.parseDouble(parts[3]);
+                addExpense(username, date, category, amount);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+public static void main(String[] args) {
+        ExpenseTracker expenseTracker = new ExpenseTracker();
+
+        
+        expenseTracker.registerUser("user1", "password1");
+        expenseTracker.registerUser("user2", "password2");
+
+        
+        String currentUser = "user1";
+        if (expenseTracker.loginUser(currentUser, "password1")) {
+            System.out.println("Login successful.");
+        } else {
+            System.out.println("Login failed. Invalid credentials.");
+            return;
+        }
+
+        
+        expenseTracker.addExpense(currentUser, new Date(), "Food", 50.0);
+        expenseTracker.addExpense(currentUser, new Date(), "Transportation", 30.0);
+        expenseTracker.addExpense(currentUser, new Date(), "Food", 20.0);
+
+        
+        List<Expense> expenses = expenseTracker.getExpenses(currentUser);
+        System.out.println("\nAll Expenses:");
+        for (Expense expense : expenses) {
+            System.out.println(expense);
+        }
+
+        
+        double totalExpense = expenseTracker.calculateTotalExpense(currentUser);
+        System.out.println("\nTotal Expenses: $" + totalExpense);
+
+       
+        Map<String, Double> categorySum = expenseTracker.calculateCategorySum(currentUser);
+        System.out.println("\nCategory-wise Expenses:");
+        for (String category : categorySum.keySet()) {
+            System.out.println(category + ": $" + categorySum.get(category));
+        }
+
+       
+        expenseTracker.saveToFile();
+
+        
+        expenseTracker.loadFromFile();
+
+        
+        System.out.println("\nLoaded Expenses:");
+        expenses = expenseTracker.getExpenses(currentUser);
+        for (Expense expense : expenses) {
+            System.out.println(expense);
+        }
+    }
+}
